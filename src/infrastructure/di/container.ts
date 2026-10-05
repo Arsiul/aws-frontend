@@ -17,10 +17,16 @@ import { GetSharedResponsibilityUseCase } from '../../application/use-cases/GetS
 import { GetSystemAlertsUseCase } from '../../application/use-cases/GetSystemAlertsUseCase'
 import {
   DeleteCloudProposalUseCase,
+  GetActiveProposalUseCase,
   GetCloudProposalsUseCase,
+  LoadExampleScenarioUseCase,
   RegisterCloudProposalUseCase,
+  ResetWorkspaceUseCase,
+  SetActiveProposalUseCase,
+  UpdateCloudProposalUseCase,
 } from '../../application/use-cases/PlanningUseCases'
 import { SimulateRegionFailoverUseCase } from '../../application/use-cases/SimulateRegionFailoverUseCase'
+import { EXAMPLE_SCENARIO_DATA } from '../data/exampleScenario.data'
 import { CloudServiceRepository } from '../repositories/CloudServiceRepository'
 import { CostRepository } from '../repositories/CostRepository'
 import { NetworkRepository } from '../repositories/NetworkRepository'
@@ -37,35 +43,47 @@ function buildContainer() {
   const planningRepository = new PlanningRepository()
   const networkRepository = new NetworkRepository()
 
+  // Use-cases that other use-cases compose.
+  const getSecurityChecks = new GetSecurityChecksUseCase(securityRepository, planningRepository)
+  const getCloudServices = new GetCloudServicesUseCase(cloudServiceRepository, planningRepository)
+  const estimateCost = new EstimateCostUseCase(costRepository, regionRepository)
   const getDashboardSummary = new GetDashboardSummaryUseCase(
     cloudServiceRepository,
     regionRepository,
-    securityRepository,
+    costRepository,
+    planningRepository,
+    getSecurityChecks,
   )
 
   // Application: use-cases injected with the ports they depend on (constructor injection).
   return {
-    getCloudServices: new GetCloudServicesUseCase(cloudServiceRepository),
-    getCloudServiceDetail: new GetCloudServiceDetailUseCase(cloudServiceRepository, regionRepository),
+    getCloudServices,
+    getCloudServiceDetail: new GetCloudServiceDetailUseCase(cloudServiceRepository, regionRepository, planningRepository),
     getRegions: new GetRegionsUseCase(regionRepository),
     getRegionConnections: new GetRegionConnectionsUseCase(regionRepository),
     simulateRegionFailover: new SimulateRegionFailoverUseCase(regionRepository),
     getCostCatalog: new GetCostCatalogUseCase(costRepository),
-    estimateCost: new EstimateCostUseCase(costRepository, regionRepository),
-    getSecurityChecks: new GetSecurityChecksUseCase(securityRepository),
+    estimateCost,
+    getSecurityChecks,
     getIamIdentities: new GetIamIdentitiesUseCase(securityRepository),
     getSharedResponsibility: new GetSharedResponsibilityUseCase(securityRepository),
-    getSystemAlerts: new GetSystemAlertsUseCase(securityRepository, regionRepository),
+    getSystemAlerts: new GetSystemAlertsUseCase(getSecurityChecks, regionRepository),
     getCloudProposals: new GetCloudProposalsUseCase(planningRepository),
-    registerCloudProposal: new RegisterCloudProposalUseCase(planningRepository),
+    registerCloudProposal: new RegisterCloudProposalUseCase(planningRepository, costRepository),
+    updateCloudProposal: new UpdateCloudProposalUseCase(planningRepository),
     deleteCloudProposal: new DeleteCloudProposalUseCase(planningRepository),
-    getNetworkArchitecture: new GetNetworkArchitectureUseCase(networkRepository),
+    getActiveProposal: new GetActiveProposalUseCase(planningRepository),
+    setActiveProposal: new SetActiveProposalUseCase(planningRepository),
+    loadExampleScenario: new LoadExampleScenarioUseCase(planningRepository, EXAMPLE_SCENARIO_DATA),
+    resetWorkspace: new ResetWorkspaceUseCase(planningRepository),
+    getNetworkArchitecture: new GetNetworkArchitectureUseCase(networkRepository, planningRepository, regionRepository),
     getDashboardSummary,
     generateCloudReport: new GenerateCloudReportUseCase(
       getDashboardSummary,
-      cloudServiceRepository,
+      getCloudServices,
+      getSecurityChecks,
+      estimateCost,
       regionRepository,
-      securityRepository,
       planningRepository,
     ),
   }

@@ -1,5 +1,5 @@
 import type { CostCatalogItem, CostLineItem } from '../../domain/entities'
-import { MONTHS_PER_YEAR } from '../../domain/pricing'
+import { estimateCostLines } from '../../domain/pricing'
 import type { CostEstimateRequest, ICostRepository, IRegionRepository } from '../../domain/repositories'
 
 export class GetCostCatalogUseCase {
@@ -14,11 +14,7 @@ export class GetCostCatalogUseCase {
   }
 }
 
-/**
- * Business rule (on-demand pricing): a line costs unitPrice × quantity per hour, the month
- * is that hourly cost × the hours of use entered, and the year is twelve months.
- * The unit price is adjusted by the selected region's pricing factor.
- */
+/** Prices the requested lines with the selected region's pricing factor (see domain/pricing). */
 export class EstimateCostUseCase {
   private readonly costRepository: ICostRepository
   private readonly regionRepository: IRegionRepository
@@ -35,25 +31,6 @@ export class EstimateCostUseCase {
       this.costRepository.getCatalog(),
       regionId ? this.regionRepository.getById(regionId) : Promise.resolve(undefined),
     ])
-    const pricingFactor = region?.pricingFactor ?? 1
-
-    return requests.map((request, index) => {
-      const catalogItem = catalog.find((item) => item.serviceId === request.serviceId)
-      const unitCost = (catalogItem?.hourlyCost ?? 0) * pricingFactor
-      const hourlyCost = unitCost * request.quantity
-      const monthlyCost = hourlyCost * request.estimatedHours
-
-      return {
-        id: `${request.serviceId}-${index}`,
-        serviceId: request.serviceId,
-        serviceName: catalogItem?.serviceName ?? request.serviceId,
-        quantity: request.quantity,
-        estimatedHours: request.estimatedHours,
-        unitCost,
-        hourlyCost,
-        monthlyCost,
-        annualCost: monthlyCost * MONTHS_PER_YEAR,
-      }
-    })
+    return estimateCostLines(requests, catalog, region?.pricingFactor ?? 1)
   }
 }

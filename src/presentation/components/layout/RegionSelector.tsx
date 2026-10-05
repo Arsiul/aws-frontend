@@ -1,4 +1,5 @@
 import { MapPin } from 'lucide-react'
+import { useActiveSolution } from '../../context/activeSolution'
 import { useNotifications } from '../../context/notifications'
 import { useSelectedRegion } from '../../context/selectedRegion'
 import { useRegions } from '../../hooks/useRegions'
@@ -11,16 +12,17 @@ interface RegionSelectorProps {
 
 export function RegionSelector({ className = '', variant = 'default' }: RegionSelectorProps) {
   const { data: regions } = useRegions()
-  const { selectedRegionId, setSelectedRegionId } = useSelectedRegion()
+  const { selectedRegionId } = useSelectedRegion()
+  const { activeProposal, changeRegion } = useActiveSolution()
   const { notify } = useNotifications()
 
   const handleChange = (regionId: string) => {
-    setSelectedRegionId(regionId)
+    changeRegion(regionId)
     const region = regions?.find((r) => r.id === regionId)
     if (region) {
       notify({
         tone: region.status === 'operational' ? 'info' : 'warning',
-        title: `Región principal: ${region.name}`,
+        title: activeProposal ? `${activeProposal.solutionName} → ${region.name}` : `Región principal: ${region.name}`,
         message:
           region.status === 'operational'
             ? `${region.code} · los costos se recalculan con factor ×${region.pricingFactor.toFixed(2)}.`

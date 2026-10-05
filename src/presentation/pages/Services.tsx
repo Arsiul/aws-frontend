@@ -4,6 +4,7 @@ import type { ServiceCategory, UtilizationStatus } from '../../domain/entities'
 import { ErrorState, LoadingState } from '../components/common/AsyncState'
 import { FilterChips } from '../components/common/FilterChips'
 import { PageHeader } from '../components/common/PageHeader'
+import { SolutionBanner } from '../components/common/SolutionBanner'
 import { ServiceCard } from '../components/common/ServiceCard'
 import { useCloudServices } from '../hooks/useCloudServices'
 import { SERVICE_CATEGORY_LABELS, UTILIZATION_LABELS } from '../labels'
@@ -18,7 +19,7 @@ const normalize = (text: string) =>
     .replace(/[̀-ͯ]/g, '')
 
 export function Services() {
-  const { data: services, isLoading, error } = useCloudServices()
+  const { data: services, error } = useCloudServices()
   // Filters live in the URL so they survive reloads and the dashboard chart can link to a category.
   const [params, setParams] = useSearchParams()
   const query = params.get('q') ?? ''
@@ -37,8 +38,8 @@ export function Services() {
     )
   }
 
-  if (isLoading) return <LoadingState label="Cargando catálogo de servicios AWS…" />
   if (error) return <ErrorState message={error} />
+  if (!services) return <LoadingState label="Cargando catálogo de servicios AWS…" />
 
   const all = services ?? []
   const needle = normalize(query.trim())
@@ -70,6 +71,8 @@ export function Services() {
         title="Catálogo de servicios AWS"
         description="Servicios disponibles para la solución Cloud, con su categoría, función y estado de utilización."
       />
+
+      <SolutionBanner detail="el estado de utilización refleja sus servicios" />
 
       <div className="space-y-4 rounded-card border border-border bg-card p-5 shadow-card">
         <div className="flex flex-col gap-3 md:flex-row">

@@ -1,4 +1,4 @@
-import { CalendarDays, MapPin, Target, Trash2, Users } from 'lucide-react'
+import { CalendarDays, CheckCircle2, MapPin, Power, Target, Trash2, Users } from 'lucide-react'
 import type { CloudProposal } from '../../../domain/entities'
 import { formatDate, formatNumber } from '../../../shared/utils/format'
 import { AVAILABILITY_LABELS } from '../../labels'
@@ -10,12 +10,23 @@ interface ProposalCardProps {
   proposal: CloudProposal
   regionName: string
   serviceNames: Record<string, string>
+  isActive?: boolean
+  onActivate?: (id: string | null) => void
   onDelete?: (id: string) => void
 }
 
-export function ProposalCard({ proposal, regionName, serviceNames, onDelete }: ProposalCardProps) {
+export function ProposalCard({ proposal, regionName, serviceNames, isActive, onActivate, onDelete }: ProposalCardProps) {
   return (
-    <article className="flex animate-fadeInUp flex-col rounded-card border border-border bg-card p-5 shadow-card transition-all duration-200 hover:shadow-md">
+    <article
+      className={`flex animate-fadeInUp flex-col rounded-card border bg-card p-5 shadow-card transition-all duration-200 hover:shadow-md ${
+        isActive ? 'border-brand ring-2 ring-brand/20' : 'border-border'
+      }`}
+    >
+      {isActive && (
+        <p className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-brand">
+          <CheckCircle2 size={14} /> Solución activa en todos los módulos
+        </p>
+      )}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="truncate text-base font-semibold text-text-primary">{proposal.solutionName}</h3>
@@ -49,8 +60,8 @@ export function ProposalCard({ proposal, regionName, serviceNames, onDelete }: P
         />
       </div>
 
-      <div className="mt-auto border-t border-border pt-3">
-        <p className="mt-1 text-xs font-medium text-text-secondary">
+      <div className="mt-4 border-t border-border pt-3">
+        <p className="text-xs font-medium text-text-secondary">
           Servicios seleccionados ({proposal.selectedServices.length})
         </p>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -61,6 +72,19 @@ export function ProposalCard({ proposal, regionName, serviceNames, onDelete }: P
           ))}
         </div>
       </div>
+
+      {onActivate && (
+        <div className="mt-auto pt-4 print:hidden">
+          <button
+            type="button"
+            onClick={() => onActivate(isActive ? null : proposal.id)}
+            className={`w-full ${isActive ? 'btn-secondary' : 'btn-primary'}`}
+          >
+            <Power size={15} />
+            {isActive ? 'Desactivar' : 'Activar en todos los módulos'}
+          </button>
+        </div>
+      )}
     </article>
   )
 }

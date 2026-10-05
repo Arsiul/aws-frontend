@@ -1,5 +1,6 @@
 import { BrowserRouter } from 'react-router-dom'
 import { DIProvider } from './infrastructure/di/DIProvider'
+import { ActiveSolutionProvider } from './presentation/context/ActiveSolutionProvider'
 import { NotificationProvider } from './presentation/context/NotificationProvider'
 import { SelectedRegionProvider } from './presentation/context/SelectedRegionProvider'
 import { ThemeProvider } from './presentation/context/ThemeProvider'
@@ -11,9 +12,11 @@ export default function App() {
       <ThemeProvider>
         <SelectedRegionProvider>
           <NotificationProvider>
-            <BrowserRouter>
-              <AppRoutes />
-            </BrowserRouter>
+            <ActiveSolutionProvider>
+              <BrowserRouter>
+                <AppRoutes />
+              </BrowserRouter>
+            </ActiveSolutionProvider>
           </NotificationProvider>
         </SelectedRegionProvider>
       </ThemeProvider>

@@ -42,6 +42,22 @@ npm run lint      # análisis estático con oxlint
 | Servicios AWS | `/services` | Catálogo con EC2, S3, RDS, IAM, VPC, Route 53, CloudFront, Lambda, CloudWatch y Shield: nombre, categoría, descripción, función principal y estado. Buscador, filtro por categoría y por estado. |
 | Detalle de servicio | `/services/:id` | Vista detallada: características, casos de uso, modelo de precios, costo por hora y mensual, y regiones donde está desplegado. |
 
+### Solución activa: módulos integrados
+
+Cada propuesta registrada en **Planificación** es una solución propia (datos mock creados por el usuario y guardados en `localStorage`). Al **activarla**, todos los módulos se calculan a partir de ella:
+
+| Módulo | Qué cambia con la solución activa |
+|---|---|
+| Dashboard | Nombre, región, servicios, costo mensual / anual, recursos, seguridad y estado de esa solución |
+| Costos | Las líneas son los recursos de la solución; agregar o quitar uno actualiza el Dashboard, la Red y la Seguridad |
+| Arquitectura de Red | El diagrama se genera con sus servicios (sin EC2 no hay Load Balancer; multi-AZ replica en dos zonas; S3, Lambda y CloudWatch van fuera de la VPC) |
+| Seguridad | Controles evaluados sobre el diseño: IAM, disponibilidad, protección DDoS, monitoreo y datos |
+| Infraestructura Global | Resalta su región y los servicios desplegados; cambiar de región mueve la solución y recalcula precios |
+| Servicios AWS | El estado de utilización (activo / inactivo) refleja los servicios de la solución |
+
+- **Cargar caso de ejemplo**: carga tres soluciones de demostración (multi-AZ, una con fallas de seguridad y una multi-región serverless).
+- **Restablecer todo** (barra lateral): borra propuestas, solución activa, costos, región, tema y notificaciones, y deja la app desde cero.
+
 ### Retos adicionales implementados
 
 - **Modo oscuro**: botón en la barra superior; respeta la preferencia del sistema y se recuerda.

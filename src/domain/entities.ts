@@ -54,6 +54,14 @@ export interface RegionConnection {
 
 export type AvailabilityLevel = 'standard' | 'high' | 'critical'
 
+/** One line of a cost estimate: which service, how many units and how many hours per month. */
+export interface CostEstimateRequest {
+  serviceId: string
+  quantity: number
+  estimatedHours: number
+}
+
+/** A proposal is the user's own (mock) solution; when active, every module is computed from it. */
 export interface CloudProposal {
   id: string
   solutionName: string
@@ -64,8 +72,13 @@ export interface CloudProposal {
   availabilityLevel: AvailabilityLevel
   selectedServices: string[]
   migrationGoal: string
+  /** Billable resources of the solution; the cost module edits them. */
+  costItems: CostEstimateRequest[]
   createdAt: string
 }
+
+/** What the planning form captures; cost lines are derived when the proposal is registered. */
+export type NewCloudProposal = Omit<CloudProposal, 'id' | 'createdAt' | 'costItems'>
 
 export interface CostCatalogItem {
   serviceId: string
@@ -139,6 +152,9 @@ export type NetworkNodeType =
   | 'loadbalancer'
   | 'compute'
   | 'database'
+  | 'storage'
+  | 'serverless'
+  | 'monitoring'
 
 export interface NetworkNode {
   id: string
@@ -170,7 +186,11 @@ export interface SecurityGroup {
 }
 
 export interface NetworkArchitecture {
+  /** Name of the solution this diagram belongs to, or null for the reference architecture. */
+  solutionName: string | null
   vpcCidr: string
+  /** Design remarks shown under the diagram (multi-AZ, default VPC, failover…). */
+  notes: string[]
   nodes: NetworkNode[]
   connections: NetworkConnection[]
   subnets: Subnet[]
@@ -187,7 +207,19 @@ export interface CategoryCost {
   cost: number
 }
 
+export interface ActiveSolutionInfo {
+  id: string
+  name: string
+  applicationType: string
+  availabilityLevel: AvailabilityLevel
+  estimatedUsers: number
+  migrationGoal: string
+}
+
 export interface DashboardSummary {
+  /** Null when no proposal is active: the summary then describes the reference catalog. */
+  solution: ActiveSolutionInfo | null
+  usedServiceIds: string[]
   totalServices: number
   activeServices: number
   selectedRegionId: string
@@ -227,6 +259,8 @@ export interface CloudServiceDetail {
 export interface CloudReport {
   generatedAt: string
   summary: DashboardSummary
+  /** Priced cost lines of the active solution (empty when none is active). */
+  costLines: CostLineItem[]
   services: CloudService[]
   regions: Region[]
   securityChecks: SecurityCheckItem[]

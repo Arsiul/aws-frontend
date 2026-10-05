@@ -1,14 +1,13 @@
-import { ClipboardList, Rocket, RotateCcw, Send } from 'lucide-react'
+import { ClipboardList, Rocket, RotateCcw, Send, Sparkles } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
-import type { AvailabilityLevel, CloudProposal } from '../../domain/entities'
+import type { AvailabilityLevel, NewCloudProposal } from '../../domain/entities'
 import { ErrorState, LoadingState } from '../components/common/AsyncState'
 import { FormField } from '../components/common/FormField'
 import { PageHeader } from '../components/common/PageHeader'
 import { Panel } from '../components/common/Panel'
 import { ProposalCard } from '../components/common/ProposalCard'
-import { useNotifications } from '../context/notifications'
+import { useActiveSolution } from '../context/activeSolution'
 import { useSelectedRegion } from '../context/selectedRegion'
-import { useCloudProposals } from '../hooks/useCloudProposals'
 import { useCloudServices } from '../hooks/useCloudServices'
 import { useRegions } from '../hooks/useRegions'
 import { AVAILABILITY_LABELS, SERVICE_CATEGORY_LABELS, shortServiceName } from '../labels'
@@ -33,7 +32,7 @@ const MIGRATION_GOALS = [
 
 const AVAILABILITY_OPTIONS = Object.entries(AVAILABILITY_LABELS) as [AvailabilityLevel, string][]
 
-type ProposalForm = Omit<CloudProposal, 'id' | 'createdAt'>
+type ProposalForm = NewCloudProposal
 
 function emptyForm(regionId: string): ProposalForm {
   return {
@@ -50,10 +49,20 @@ function emptyForm(regionId: string): ProposalForm {
 
 export function Planning() {
   const { selectedRegionId } = useSelectedRegion()
-  const { notify } = useNotifications()
   const { data: regions } = useRegions()
   const { data: services } = useCloudServices()
-  const { proposals, isLoading, error, register, remove, isSubmitting, submitError } = useCloudProposals()
+  const {
+    proposals,
+    activeProposal,
+    isLoading,
+    error,
+    register,
+    remove,
+    activate,
+    loadExample,
+    isSubmitting,
+    submitError,
+  } = useActiveSolution()
   const [form, setForm] = useState<ProposalForm>(() => emptyForm(selectedRegionId))
 
   const serviceNames = Object.fromEntries((services ?? []).map((s) => [s.id, shortServiceName(s.name)]))
@@ -77,21 +86,18 @@ export function Planning() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     const ok = await register(form)
-    if (ok) {
-      notify({
-        tone: 'success',
-        title: 'Propuesta registrada',
-        message: `"${form.solutionName}" en ${regionLabel(form.regionId)} con ${form.selectedServices.length} servicio(s).`,
-      })
-      setForm(emptyForm(selectedRegionId))
-    }
+    if (ok) setForm(emptyForm(form.regionId))
   }
 
   const handleDelete = async (id: string) => {
     const proposal = proposals.find((p) => p.id === id)
     if (!proposal || !window.confirm(`¿Eliminar la propuesta "${proposal.solutionName}"?`)) return
     await remove(id)
-    notify({ tone: 'info', title: 'Propuesta eliminada', message: proposal.solutionName })
+  }
+
+  const handleLoadExample = async () => {
+    if (proposals.length > 0 && !window.confirm('El caso de ejemplo reemplaza las propuestas actuales. ¿Continuar?')) return
+    await loadExample()
   }
 
   return (
@@ -99,13 +105,18 @@ export function Planning() {
       <PageHeader
         icon={Rocket}
         title="Planificación Cloud"
-        description="Registra una propuesta de solución Cloud para la organización."
+        description="Registra tu propia solución Cloud y actívala: el Dashboard, Costos, Red, Seguridad e Infraestructura se calculan a partir de ella."
+        action={
+          <button type="button" onClick={handleLoadExample} className="btn-secondary">
+            <Sparkles size={16} /> Cargar caso de ejemplo
+          </button>
+        }
       />
 
       <Panel
         title="Nueva propuesta"
         icon={ClipboardList}
-        description="Todos los campos son obligatorios. Selecciona al menos un servicio."
+        description="Todos los campos son obligatorios. Al registrarla se convierte en la solución activa."
       >
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -264,6 +275,8 @@ export function Planning() {
               proposal={proposal}
               regionName={regionLabel(proposal.regionId)}
               serviceNames={serviceNames}
+              isActive={proposal.id === activeProposal?.id}
+              onActivate={activate}
               onDelete={handleDelete}
             />
           ))}

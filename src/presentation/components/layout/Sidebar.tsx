@@ -1,6 +1,7 @@
 import { Cloud } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { NAV_ITEMS } from './navItems'
+import { ResetButton } from './ResetButton'
 
 export function Sidebar() {
   return (
@@ -34,8 +35,9 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="border-t border-white/10 px-6 py-4 text-xs text-slate-400">
-        Cloud Foundations · Semanas 5-6
+      <div className="space-y-3 border-t border-white/10 px-4 py-4">
+        <ResetButton />
+        <p className="px-2 text-xs text-slate-400">Cloud Foundations · Semanas 5-6</p>
       </div>
     </aside>
   )

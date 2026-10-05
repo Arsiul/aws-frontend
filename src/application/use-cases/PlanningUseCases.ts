@@ -1,5 +1,24 @@
-import type { CloudProposal } from '../../domain/entities'
-import type { IPlanningRepository } from '../../domain/repositories'
+import type { CloudProposal, NewCloudProposal } from '../../domain/entities'
+import { defaultCostItems } from '../../domain/pricing'
+import type { ICostRepository, IPlanningRepository } from '../../domain/repositories'
+
+/** Shared by every use case that adapts its output to the user's active solution. */
+export async function loadActiveProposal(planningRepository: IPlanningRepository): Promise<CloudProposal | null> {
+  const id = await planningRepository.getActiveId()
+  return id ? ((await planningRepository.getById(id)) ?? null) : null
+}
+
+function validate(proposal: NewCloudProposal): void {
+  if (!proposal.solutionName.trim()) {
+    throw new Error('El nombre de la solución es obligatorio')
+  }
+  if (proposal.estimatedUsers <= 0) {
+    throw new Error('El número estimado de usuarios debe ser mayor a 0')
+  }
+  if (proposal.selectedServices.length === 0) {
+    throw new Error('Debe seleccionar al menos un servicio Cloud')
+  }
+}
 
 export class GetCloudProposalsUseCase {
   private readonly planningRepository: IPlanningRepository
@@ -13,24 +32,42 @@ export class GetCloudProposalsUseCase {
   }
 }
 
+/** Registers the proposal with one unit of each billable service and makes it the active solution. */
 export class RegisterCloudProposalUseCase {
+  private readonly planningRepository: IPlanningRepository
+  private readonly costRepository: ICostRepository
+
+  constructor(planningRepository: IPlanningRepository, costRepository: ICostRepository) {
+    this.planningRepository = planningRepository
+    this.costRepository = costRepository
+  }
+
+  async execute(proposal: NewCloudProposal): Promise<CloudProposal> {
+    validate(proposal)
+    const catalog = await this.costRepository.getCatalog()
+    const created = await this.planningRepository.create({
+      ...proposal,
+      costItems: defaultCostItems(proposal.selectedServices, catalog),
+    })
+    await this.planningRepository.setActiveId(created.id)
+    return created
+  }
+}
+
+/** Saves changes to a proposal. Cost lines and selected services are kept consistent: a billed
+ *  service is always part of the solution. */
+export class UpdateCloudProposalUseCase {
   private readonly planningRepository: IPlanningRepository
 
   constructor(planningRepository: IPlanningRepository) {
     this.planningRepository = planningRepository
   }
 
-  execute(proposal: Omit<CloudProposal, 'id' | 'createdAt'>): Promise<CloudProposal> {
-    if (!proposal.solutionName.trim()) {
-      throw new Error('El nombre de la solución es obligatorio')
-    }
-    if (proposal.estimatedUsers <= 0) {
-      throw new Error('El número estimado de usuarios debe ser mayor a 0')
-    }
-    if (proposal.selectedServices.length === 0) {
-      throw new Error('Debe seleccionar al menos un servicio Cloud')
-    }
-    return this.planningRepository.create(proposal)
+  async execute(proposal: CloudProposal): Promise<CloudProposal> {
+    validate(proposal)
+    const billed = proposal.costItems.map((item) => item.serviceId)
+    const selectedServices = [...new Set([...proposal.selectedServices, ...billed])]
+    return this.planningRepository.update({ ...proposal, selectedServices })
   }
 }
 
@@ -43,5 +80,69 @@ export class DeleteCloudProposalUseCase {
 
   execute(id: string): Promise<void> {
     return this.planningRepository.delete(id)
+  }
+}
+
+export class GetActiveProposalUseCase {
+  private readonly planningRepository: IPlanningRepository
+
+  constructor(planningRepository: IPlanningRepository) {
+    this.planningRepository = planningRepository
+  }
+
+  execute(): Promise<CloudProposal | null> {
+    return loadActiveProposal(this.planningRepository)
+  }
+}
+
+export class SetActiveProposalUseCase {
+  private readonly planningRepository: IPlanningRepository
+
+  constructor(planningRepository: IPlanningRepository) {
+    this.planningRepository = planningRepository
+  }
+
+  async execute(id: string | null): Promise<CloudProposal | null> {
+    if (id && !(await this.planningRepository.getById(id))) {
+      throw new Error('La propuesta no existe')
+    }
+    await this.planningRepository.setActiveId(id)
+    return loadActiveProposal(this.planningRepository)
+  }
+}
+
+/** Replaces the stored proposals with the demo scenario and activates the first one. */
+export class LoadExampleScenarioUseCase {
+  private readonly planningRepository: IPlanningRepository
+  private readonly scenario: Omit<CloudProposal, 'createdAt'>[]
+
+  constructor(planningRepository: IPlanningRepository, scenario: Omit<CloudProposal, 'createdAt'>[]) {
+    this.planningRepository = planningRepository
+    this.scenario = scenario
+  }
+
+  async execute(): Promise<CloudProposal | null> {
+    const now = Date.now()
+    // Staggered timestamps keep the scenario order when listed newest first.
+    const proposals = this.scenario.map((p, index) => ({
+      ...p,
+      createdAt: new Date(now - index * 60_000).toISOString(),
+    }))
+    await this.planningRepository.replaceAll(proposals)
+    await this.planningRepository.setActiveId(proposals[0]?.id ?? null)
+    return loadActiveProposal(this.planningRepository)
+  }
+}
+
+/** Removes every proposal and the active selection: the app starts from zero. */
+export class ResetWorkspaceUseCase {
+  private readonly planningRepository: IPlanningRepository
+
+  constructor(planningRepository: IPlanningRepository) {
+    this.planningRepository = planningRepository
+  }
+
+  execute(): Promise<void> {
+    return this.planningRepository.clear()
   }
 }

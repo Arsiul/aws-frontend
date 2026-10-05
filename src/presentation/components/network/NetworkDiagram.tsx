@@ -1,10 +1,14 @@
 import {
+  Activity,
   ArrowDown,
   ArrowRight,
   Cloud,
   Database,
   DoorOpen,
+  Cpu,
   Globe,
+  HardDrive,
+  Info,
   Lock,
   Network,
   Server,
@@ -25,6 +29,9 @@ const NODE_ICONS: Record<NetworkNode['type'], LucideIcon> = {
   loadbalancer: Split,
   compute: Server,
   database: Database,
+  storage: HardDrive,
+  serverless: Cpu,
+  monitoring: Activity,
 }
 
 const NODE_SUBTITLES: Record<NetworkNode['type'], string> = {
@@ -36,9 +43,13 @@ const NODE_SUBTITLES: Record<NetworkNode['type'], string> = {
   loadbalancer: 'Balanceo de carga',
   compute: 'Cómputo',
   database: 'Base de datos',
+  storage: 'Almacenamiento',
+  serverless: 'Serverless',
+  monitoring: 'Monitoreo',
 }
 
 const EDGE_TYPES: NetworkNode['type'][] = ['internet', 'dns', 'cdn']
+const MANAGED_TYPES: NetworkNode['type'][] = ['serverless', 'storage', 'monitoring']
 
 type Selection = { kind: 'node'; id: string } | { kind: 'subnet'; id: string } | null
 
@@ -67,6 +78,7 @@ export function NetworkDiagram({ architecture }: NetworkDiagramProps) {
   const gateway = nodes.find((n) => n.type === 'gateway')
   const publicSubnets = subnets.filter((s) => s.kind === 'public')
   const privateSubnets = subnets.filter((s) => s.kind === 'private')
+  const managedNodes = nodes.filter((n) => MANAGED_TYPES.includes(n.type))
 
   const selectNode = (id: string) => setSelection({ kind: 'node', id })
   const selectSubnet = (id: string) => setSelection({ kind: 'subnet', id })
@@ -151,6 +163,26 @@ export function NetworkDiagram({ architecture }: NetworkDiagramProps) {
           </div>
         )}
       </div>
+
+      {managedNodes.length > 0 && (
+        <div className="mx-auto mt-6 max-w-3xl rounded-xl border border-dashed border-cost/50 bg-cost/5 p-4">
+          <p className="text-center text-xs font-semibold text-text-primary">
+            Servicios administrados de la región (fuera de la VPC)
+          </p>
+          <div className="mt-3 flex flex-wrap justify-center gap-3">{managedNodes.map(renderNode)}</div>
+        </div>
+      )}
+
+      {architecture.notes.length > 0 && (
+        <ul className="mx-auto mt-6 max-w-3xl space-y-1.5">
+          {architecture.notes.map((note) => (
+            <li key={note} className="flex items-start gap-2 text-sm text-text-secondary">
+              <Info size={15} className="mt-0.5 shrink-0 text-brand" />
+              {note}
+            </li>
+          ))}
+        </ul>
+      )}
 
       <Legend />
 

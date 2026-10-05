@@ -1,22 +1,23 @@
 import type { SystemAlert } from '../../domain/entities'
-import type { IRegionRepository, ISecurityRepository } from '../../domain/repositories'
+import type { IRegionRepository } from '../../domain/repositories'
+import type { GetSecurityChecksUseCase } from './GetSecurityChecksUseCase'
 
 const REGION_STATUS_LABEL = { degraded: 'degradada', outage: 'caída' } as const
 
 /** Derives the notification-center alerts from the current state: security checks that are
  *  not "ok" and regions that are not operational. Stable ids let the UI remember what was read. */
 export class GetSystemAlertsUseCase {
-  private readonly securityRepository: ISecurityRepository
+  private readonly getSecurityChecks: GetSecurityChecksUseCase
   private readonly regionRepository: IRegionRepository
 
-  constructor(securityRepository: ISecurityRepository, regionRepository: IRegionRepository) {
-    this.securityRepository = securityRepository
+  constructor(getSecurityChecks: GetSecurityChecksUseCase, regionRepository: IRegionRepository) {
+    this.getSecurityChecks = getSecurityChecks
     this.regionRepository = regionRepository
   }
 
   async execute(): Promise<SystemAlert[]> {
     const [checks, regions] = await Promise.all([
-      this.securityRepository.getChecks(),
+      this.getSecurityChecks.execute(),
       this.regionRepository.getAll(),
     ])
 

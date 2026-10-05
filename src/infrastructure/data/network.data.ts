@@ -1,7 +1,9 @@
 import type { NetworkArchitecture } from '../../domain/entities'
 
 export const NETWORK_ARCHITECTURE_DATA: NetworkArchitecture = {
+  solutionName: null,
   vpcCidr: '10.0.0.0/16',
+  notes: [],
   nodes: [
     { id: 'internet', label: 'Internet', type: 'internet', description: 'Usuarios finales accediendo a la aplicación desde cualquier lugar.' },
     { id: 'route53', label: 'Route 53', type: 'dns', description: 'Resuelve el dominio y enruta al endpoint más saludable (health checks y failover).' },

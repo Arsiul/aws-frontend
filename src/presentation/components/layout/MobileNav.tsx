@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { NAV_ITEMS } from './navItems'
 import { RegionSelector } from './RegionSelector'
+import { ResetButton } from './ResetButton'
 
 interface MobileNavProps {
   isOpen: boolean
@@ -76,6 +77,10 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
             </NavLink>
           ))}
         </nav>
+
+        <div className="border-t border-white/10 px-4 py-4">
+          <ResetButton />
+        </div>
       </aside>
     </div>
   )

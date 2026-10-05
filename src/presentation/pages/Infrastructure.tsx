@@ -2,9 +2,11 @@ import { Globe, Layers, MapPinned, ServerCog, TriangleAlert } from 'lucide-react
 import { formatNumber } from '../../shared/utils/format'
 import { ErrorState, LoadingState } from '../components/common/AsyncState'
 import { PageHeader } from '../components/common/PageHeader'
+import { SolutionBanner } from '../components/common/SolutionBanner'
 import { RegionCard } from '../components/common/RegionCard'
 import { StatCard } from '../components/common/StatCard'
 import { RegionMap } from '../components/map/RegionMap'
+import { useActiveSolution } from '../context/activeSolution'
 import { useNotifications } from '../context/notifications'
 import { useSelectedRegion } from '../context/selectedRegion'
 import { useCloudServices } from '../hooks/useCloudServices'
@@ -17,7 +19,8 @@ export function Infrastructure() {
   const { data: connections } = useRegionConnections()
   const { data: services } = useCloudServices()
   const { result, isSimulating, simulate, reset } = useRegionFailover()
-  const { selectedRegionId, setSelectedRegionId } = useSelectedRegion()
+  const { selectedRegionId } = useSelectedRegion()
+  const { activeProposal, changeRegion } = useActiveSolution()
   const { notify } = useNotifications()
 
   if (isLoading) return <LoadingState label="Cargando infraestructura global…" />
@@ -42,10 +45,21 @@ export function Infrastructure() {
   }
 
   const handleSelect = (regionId: string) => {
-    setSelectedRegionId(regionId)
+    changeRegion(regionId)
     const region = regions.find((r) => r.id === regionId)
-    if (region) notify({ tone: 'info', title: `Región principal: ${region.name}`, message: region.code })
+    if (region) {
+      notify({
+        tone: 'info',
+        title: activeProposal ? `${activeProposal.solutionName} → ${region.name}` : `Región principal: ${region.name}`,
+        message: activeProposal ? 'La solución se movió de región: costos y Dashboard se recalculan.' : region.code,
+      })
+    }
   }
+
+  const solutionOn = (regionId: string) =>
+    activeProposal?.regionId === regionId
+      ? { name: activeProposal.solutionName, services: activeProposal.selectedServices.map((id) => serviceNames[id] ?? id) }
+      : undefined
 
   return (
     <div className="space-y-6">
@@ -61,6 +75,8 @@ export function Infrastructure() {
           )
         }
       />
+
+      <SolutionBanner detail="su región se resalta en el mapa y en su tarjeta" />
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <StatCard label="Regiones" value={String(regions.length)} icon={MapPinned} accent="brand" />
@@ -96,6 +112,7 @@ export function Infrastructure() {
             region={region}
             serviceNames={serviceNames}
             isSelected={region.id === selectedRegionId}
+            solution={solutionOn(region.id)}
             onSelect={handleSelect}
             onSimulateOutage={handleSimulate}
             isSimulating={isSimulating}

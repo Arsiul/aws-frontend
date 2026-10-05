@@ -23,6 +23,18 @@ export function cloudReportToCsv(report: CloudReport): string {
     ['CloudOps Dashboard — Reporte de la solución Cloud'],
     ['Generado', formatDateTime(report.generatedAt)],
     [],
+    ...(summary.solution
+      ? [
+          ['SOLUCIÓN ACTIVA'],
+          ['Nombre', summary.solution.name],
+          ['Tipo de aplicación', summary.solution.applicationType],
+          ['Usuarios estimados', summary.solution.estimatedUsers],
+          ['Disponibilidad', AVAILABILITY_LABELS[summary.solution.availabilityLevel]],
+          ['Objetivo de la migración', summary.solution.migrationGoal],
+          ['Servicios', summary.usedServiceIds.map(serviceName).join(' | ')],
+          [],
+        ]
+      : []),
     ['RESUMEN'],
     ['Indicador', 'Valor'],
     ['Región seleccionada', `${summary.selectedRegionName} (${summary.selectedRegionCode})`],
@@ -33,6 +45,21 @@ export function cloudReportToCsv(report: CloudReport): string {
     ['Estado de seguridad (%)', summary.securityScore],
     ['Recursos Cloud', summary.totalResources],
     ['Estado de la arquitectura', ARCHITECTURE_LABELS[summary.architectureStatus]],
+    ...(report.costLines.length
+      ? [
+          [],
+          ['RECURSOS Y COSTOS DE LA SOLUCIÓN'],
+          ['Servicio', 'Cantidad', 'Horas/mes', 'Costo/h (USD)', 'Costo mensual (USD)', 'Costo anual (USD)'],
+          ...report.costLines.map((line) => [
+            line.serviceName,
+            line.quantity,
+            line.estimatedHours,
+            round(line.hourlyCost, 4),
+            round(line.monthlyCost),
+            round(line.annualCost),
+          ]),
+        ]
+      : []),
     [],
     ['SERVICIOS AWS'],
     ['Servicio', 'Categoría', 'Función principal', 'Estado', 'Costo por hora (USD)'],

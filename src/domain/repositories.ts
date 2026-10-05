@@ -5,6 +5,7 @@ import type {
   CloudProposal,
   CloudService,
   CostCatalogItem,
+  CostEstimateRequest,
   IamIdentity,
   NetworkArchitecture,
   Region,
@@ -24,11 +25,7 @@ export interface IRegionRepository {
   getConnections(): Promise<RegionConnection[]>
 }
 
-export interface CostEstimateRequest {
-  serviceId: string
-  quantity: number
-  estimatedHours: number
-}
+export type { CostEstimateRequest }
 
 export interface ICostRepository {
   getCatalog(): Promise<CostCatalogItem[]>
@@ -42,8 +39,16 @@ export interface ISecurityRepository {
 
 export interface IPlanningRepository {
   getAll(): Promise<CloudProposal[]>
+  getById(id: string): Promise<CloudProposal | undefined>
   create(proposal: Omit<CloudProposal, 'id' | 'createdAt'>): Promise<CloudProposal>
+  update(proposal: CloudProposal): Promise<CloudProposal>
   delete(id: string): Promise<void>
+  /** Replaces every stored proposal (used to load the demo scenario). */
+  replaceAll(proposals: CloudProposal[]): Promise<void>
+  getActiveId(): Promise<string | null>
+  setActiveId(id: string | null): Promise<void>
+  /** Wipes proposals and the active selection. */
+  clear(): Promise<void>
 }
 
 export interface INetworkRepository {

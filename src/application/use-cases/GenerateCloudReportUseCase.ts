@@ -1,44 +1,48 @@
 import type { CloudReport } from '../../domain/entities'
-import type {
-  ICloudServiceRepository,
-  IPlanningRepository,
-  IRegionRepository,
-  ISecurityRepository,
-} from '../../domain/repositories'
+import type { IPlanningRepository, IRegionRepository } from '../../domain/repositories'
+import type { EstimateCostUseCase } from './EstimateCostUseCase'
+import type { GetCloudServicesUseCase } from './GetCloudServicesUseCase'
 import type { GetDashboardSummaryUseCase } from './GetDashboardSummaryUseCase'
+import type { GetSecurityChecksUseCase } from './GetSecurityChecksUseCase'
+import { loadActiveProposal } from './PlanningUseCases'
 
-/** Gathers everything the exported report needs in one snapshot. Serialization (CSV, print)
- *  is a presentation concern and lives outside this layer. */
+/** Gathers everything the exported report needs in one snapshot, already adapted to the active
+ *  solution. Serialization (CSV, print) is a presentation concern and lives outside this layer. */
 export class GenerateCloudReportUseCase {
   private readonly getDashboardSummary: GetDashboardSummaryUseCase
-  private readonly serviceRepository: ICloudServiceRepository
+  private readonly getCloudServices: GetCloudServicesUseCase
+  private readonly getSecurityChecks: GetSecurityChecksUseCase
+  private readonly estimateCost: EstimateCostUseCase
   private readonly regionRepository: IRegionRepository
-  private readonly securityRepository: ISecurityRepository
   private readonly planningRepository: IPlanningRepository
 
   constructor(
     getDashboardSummary: GetDashboardSummaryUseCase,
-    serviceRepository: ICloudServiceRepository,
+    getCloudServices: GetCloudServicesUseCase,
+    getSecurityChecks: GetSecurityChecksUseCase,
+    estimateCost: EstimateCostUseCase,
     regionRepository: IRegionRepository,
-    securityRepository: ISecurityRepository,
     planningRepository: IPlanningRepository,
   ) {
     this.getDashboardSummary = getDashboardSummary
-    this.serviceRepository = serviceRepository
+    this.getCloudServices = getCloudServices
+    this.getSecurityChecks = getSecurityChecks
+    this.estimateCost = estimateCost
     this.regionRepository = regionRepository
-    this.securityRepository = securityRepository
     this.planningRepository = planningRepository
   }
 
   async execute(selectedRegionId?: string): Promise<CloudReport> {
-    const [summary, services, regions, securityChecks, proposals] = await Promise.all([
+    const active = await loadActiveProposal(this.planningRepository)
+    const [summary, services, regions, securityChecks, proposals, costLines] = await Promise.all([
       this.getDashboardSummary.execute(selectedRegionId),
-      this.serviceRepository.getAll(),
+      this.getCloudServices.execute(),
       this.regionRepository.getAll(),
-      this.securityRepository.getChecks(),
+      this.getSecurityChecks.execute(),
       this.planningRepository.getAll(),
+      active ? this.estimateCost.execute(active.costItems, active.regionId) : Promise.resolve([]),
     ])
 
-    return { generatedAt: new Date().toISOString(), summary, services, regions, securityChecks, proposals }
+    return { generatedAt: new Date().toISOString(), summary, costLines, services, regions, securityChecks, proposals }
   }
 }

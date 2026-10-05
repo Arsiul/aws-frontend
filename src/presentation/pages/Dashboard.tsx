@@ -19,14 +19,15 @@ import { CostByCategoryChart } from '../components/charts/CostByCategoryChart'
 import { CostTrendChart } from '../components/charts/CostTrendChart'
 import { ErrorState, LoadingState } from '../components/common/AsyncState'
 import { PageHeader } from '../components/common/PageHeader'
+import { SolutionBanner } from '../components/common/SolutionBanner'
 import { Panel } from '../components/common/Panel'
 import { ServiceIcon } from '../components/common/ServiceIcon'
 import { StatCard } from '../components/common/StatCard'
 import { StatusBadge, healthStatusTone, securityStatusTone } from '../components/common/StatusBadge'
+import { useActiveSolution } from '../context/activeSolution'
 import { useNotifications } from '../context/notifications'
 import { useSelectedRegion } from '../context/selectedRegion'
 import { cloudReportToCsv } from '../export/reportCsv'
-import { useCloudProposals } from '../hooks/useCloudProposals'
 import { useCloudReport } from '../hooks/useCloudReport'
 import { useCloudServices } from '../hooks/useCloudServices'
 import { useDashboardSummary } from '../hooks/useDashboardSummary'
@@ -38,7 +39,7 @@ export function Dashboard() {
   const { data: summary, error } = useDashboardSummary(selectedRegionId)
   const { data: securityChecks } = useSecurityChecks()
   const { data: services } = useCloudServices()
-  const { proposals } = useCloudProposals()
+  const { proposals } = useActiveSolution()
   const { generate, isGenerating } = useCloudReport()
   const { notify } = useNotifications()
   const navigate = useNavigate()
@@ -49,7 +50,8 @@ export function Dashboard() {
 
   const criticalChecks = securityChecks?.filter((c) => c.status === 'critical') ?? []
   const warningChecks = securityChecks?.filter((c) => c.status === 'warning') ?? []
-  const activeServices = services?.filter((s) => s.status === 'active') ?? []
+  const usedServices = services?.filter((s) => summary.usedServiceIds.includes(s.id)) ?? []
+  const solution = summary.solution
   const scoreTone = summary.securityScore >= 80 ? 'success' : summary.securityScore >= 50 ? 'warning' : 'critical'
   const scoreBar = { success: 'bg-security', warning: 'bg-cost', critical: 'bg-alert' }[scoreTone]
 
@@ -68,7 +70,11 @@ export function Dashboard() {
       <PageHeader
         icon={LayoutDashboard}
         title="Dashboard"
-        description="Resumen general de la solución Cloud propuesta para la organización."
+        description={
+          solution
+            ? `Resumen de "${solution.name}": costos, región, seguridad y estado calculados con tus datos.`
+            : 'Resumen general de la solución Cloud propuesta para la organización.'
+        }
         action={
           <>
             <button type="button" onClick={() => window.print()} className="btn-secondary">
@@ -81,13 +87,15 @@ export function Dashboard() {
         }
       />
 
+      <SolutionBanner />
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Servicios utilizados"
           value={`${summary.activeServices}/${summary.totalServices}`}
           icon={CloudCog}
           accent="brand"
-          hint="Servicios activos sobre el catálogo"
+          hint={solution ? 'Servicios de la solución sobre el catálogo' : 'Servicios activos sobre el catálogo'}
         />
         <StatCard
           label="Región seleccionada"
@@ -101,7 +109,7 @@ export function Dashboard() {
           value={formatCurrency(summary.monthlyCost)}
           icon={DollarSign}
           accent="cost"
-          hint="Servicios activos, 730 h/mes"
+          hint={solution ? 'Según los recursos de Costos' : 'Servicios activos, 730 h/mes'}
         />
         <StatCard
           label="Costo anual estimado"
@@ -122,14 +130,14 @@ export function Dashboard() {
           value={String(summary.totalResources)}
           icon={Boxes}
           accent="brand"
-          hint="Servicios desplegados en todas las regiones"
+          hint={solution ? 'Instancias y servicios de la solución' : 'Servicios desplegados en todas las regiones'}
         />
         <StatCard
           label="Estado de la arquitectura"
           value={ARCHITECTURE_LABELS[summary.architectureStatus]}
           icon={Activity}
           accent={summary.architectureStatus === 'operational' ? 'security' : 'cost'}
-          hint="Salud global de las regiones"
+          hint={solution ? `Región de la solución · ${HEALTH_LABELS[summary.selectedRegionStatus]}` : 'Salud global de las regiones'}
         />
         <StatCard
           label="Propuestas registradas"
@@ -212,9 +220,13 @@ export function Dashboard() {
           />
         </Panel>
 
-        <Panel title="Servicios en uso" icon={CloudCog} description="Componentes activos de la solución.">
+        <Panel
+          title="Servicios en uso"
+          icon={CloudCog}
+          description={solution ? `Componentes de "${solution.name}".` : 'Componentes activos de la solución.'}
+        >
           <ul className="space-y-1">
-            {activeServices.map((service) => (
+            {usedServices.map((service) => (
               <li key={service.id}>
                 <Link
                   to={`/services/${service.id}`}

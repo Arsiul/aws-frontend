@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { useContainer } from '../../infrastructure/di/DIProvider'
+import { useActiveSolution } from '../context/activeSolution'
 import { useAsync } from './useAsync'
 
 export function useDashboardSummary(selectedRegionId: string) {
@@ -8,5 +9,6 @@ export function useDashboardSummary(selectedRegionId: string) {
     () => getDashboardSummary.execute(selectedRegionId),
     [getDashboardSummary, selectedRegionId],
   )
-  return useAsync(factory, [factory])
+  const { version } = useActiveSolution()
+  return useAsync(factory, [factory, version])
 }

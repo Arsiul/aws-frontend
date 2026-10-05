@@ -9,8 +9,10 @@ import { ErrorState, LoadingState } from '../components/common/AsyncState'
 import { CostCard } from '../components/common/CostCard'
 import { FormField } from '../components/common/FormField'
 import { PageHeader } from '../components/common/PageHeader'
+import { SolutionBanner } from '../components/common/SolutionBanner'
 import { Panel } from '../components/common/Panel'
 import { StatCard } from '../components/common/StatCard'
+import { useActiveSolution } from '../context/activeSolution'
 import { useNotifications } from '../context/notifications'
 import { useSelectedRegion } from '../context/selectedRegion'
 import { costEstimateToCsv } from '../export/reportCsv'
@@ -23,26 +25,44 @@ export function Costs() {
   const { notify } = useNotifications()
   const { data: catalog, isLoading, error } = useCostCatalog()
   const { data: regions } = useRegions()
-  const [requests, setRequests] = useLocalStorageState<CostEstimateRequest[]>('cloudops.cost-requests', [])
-  const items = useCostEstimate(requests, selectedRegionId)
+  const { activeProposal, updateActive } = useActiveSolution()
+  // Free-form estimate when no solution is active; otherwise the lines ARE the solution's resources.
+  const [localRequests, setLocalRequests] = useLocalStorageState<CostEstimateRequest[]>('cloudops.cost-requests', [])
+  const requests = activeProposal?.costItems ?? localRequests
+  const regionId = activeProposal?.regionId ?? selectedRegionId
+  const items = useCostEstimate(requests, regionId)
   const [draft, setDraft] = useState({ serviceId: '', quantity: 1, estimatedHours: HOURS_PER_MONTH })
 
   if (isLoading) return <LoadingState label="Cargando catálogo de costos…" />
   if (error) return <ErrorState message={error} />
 
-  const region = regions?.find((r) => r.id === selectedRegionId)
-  const regionLabel = region ? `${region.name} (${region.code})` : selectedRegionId
+  const region = regions?.find((r) => r.id === regionId)
+  const regionLabel = region ? `${region.name} (${region.code})` : regionId
+
+  const saveRequests = (next: CostEstimateRequest[]) => {
+    if (!activeProposal) {
+      setLocalRequests(next)
+      return
+    }
+    // A service with no cost lines left is no longer part of the solution.
+    const remaining = new Set(next.map((r) => r.serviceId))
+    const dropped = requests.map((r) => r.serviceId).filter((id) => !remaining.has(id))
+    updateActive({
+      costItems: next,
+      selectedServices: activeProposal.selectedServices.filter((id) => !dropped.includes(id)),
+    })
+  }
   const serviceId = draft.serviceId || catalog?.[0]?.serviceId || ''
   const isDraftValid =
     Boolean(serviceId) && draft.quantity >= 1 && draft.estimatedHours >= 1 && draft.estimatedHours <= HOURS_PER_MONTH
 
   const addLineItem = () => {
     if (!isDraftValid) return
-    setRequests((prev) => [...prev, { ...draft, serviceId }])
+    saveRequests([...requests, { ...draft, serviceId }])
   }
 
   const removeLineItem = (index: number) => {
-    setRequests((prev) => prev.filter((_, i) => i !== index))
+    saveRequests(requests.filter((_, i) => i !== index))
   }
 
   const exportCsv = () => {
@@ -63,9 +83,11 @@ export function Costs() {
         action={
           items.length > 0 && (
             <>
-              <button type="button" onClick={() => setRequests([])} className="btn-secondary">
-                <Eraser size={16} /> Vaciar
-              </button>
+              {!activeProposal && (
+                <button type="button" onClick={() => saveRequests([])} className="btn-secondary">
+                  <Eraser size={16} /> Vaciar
+                </button>
+              )}
               <button type="button" onClick={exportCsv} className="btn-primary">
                 <FileDown size={16} /> Exportar CSV
               </button>
@@ -74,7 +96,12 @@ export function Costs() {
         }
       />
 
-      <Panel title="Agregar servicio a la estimación" icon={ListPlus}>
+      <SolutionBanner detail="sus recursos y costos se editan aquí y se reflejan en el Dashboard" />
+
+      <Panel
+        title={activeProposal ? 'Agregar recurso a la solución' : 'Agregar servicio a la estimación'}
+        icon={ListPlus}
+      >
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_auto] lg:items-end">
           <FormField label="Servicio">
             <select

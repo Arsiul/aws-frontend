@@ -1,4 +1,4 @@
-import { MapPin, Star } from 'lucide-react'
+import { MapPin, Rocket, Star } from 'lucide-react'
 import type { Region } from '../../../domain/entities'
 import { HEALTH_LABELS } from '../../labels'
 import { StatusBadge, healthStatusTone } from './StatusBadge'
@@ -8,6 +8,8 @@ interface RegionCardProps {
   /** Service id → display name, to list what is deployed in the region. */
   serviceNames?: Record<string, string>
   isSelected?: boolean
+  /** Active solution deployed in this region, with the display names of its services. */
+  solution?: { name: string; services: string[] }
   onSelect?: (regionId: string) => void
   onSimulateOutage?: (regionId: string) => void
   isSimulating?: boolean
@@ -17,6 +19,7 @@ export function RegionCard({
   region,
   serviceNames = {},
   isSelected,
+  solution,
   onSelect,
   onSimulateOutage,
   isSimulating,
@@ -42,6 +45,21 @@ export function RegionCard({
         </div>
         <StatusBadge label={HEALTH_LABELS[region.status]} tone={healthStatusTone(region.status)} />
       </div>
+
+      {solution && (
+        <div className="mt-4 rounded-lg border border-brand/30 bg-brand/5 p-2.5">
+          <p className="flex items-center gap-1.5 text-xs font-semibold text-brand">
+            <Rocket size={13} /> {solution.name}
+          </p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {solution.services.map((name) => (
+              <span key={name} className="rounded-md bg-brand px-2 py-0.5 text-[11px] font-medium text-white">
+                {name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       <p className="mt-4 text-xs font-medium text-text-secondary">
         Servicios desplegados ({region.servicesDeployed.length})
