@@ -84,4 +84,23 @@ src/
 
 ## Capturas
 
-Las evidencias de cada módulo (Dashboard, Planificación, Costos, Infraestructura, Seguridad, Arquitectura de Red, Servicios AWS y vista responsive) están en la carpeta `screenshots/` de la entrega, junto con `CAPTURAS.md`.
+### Dashboard
+![Dashboard](screenshots/dashboard.png)
+
+### Planificación Cloud
+![Planificación Cloud](screenshots/planning.png)
+
+### Costos y economía Cloud
+![Costos](screenshots/costs.png)
+
+### Infraestructura Global
+![Infraestructura Global](screenshots/infrastructure.png)
+
+### Seguridad
+![Seguridad](screenshots/security.png)
+
+### Arquitectura de Red
+![Arquitectura de Red](screenshots/network.png)
+
+### Servicios AWS
+![Servicios AWS](screenshots/services.png)
