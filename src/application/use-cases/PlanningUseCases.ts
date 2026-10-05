@@ -1,6 +1,6 @@
-import type { CloudProposal, NewCloudProposal } from '../../domain/entities'
-import { defaultCostItems } from '../../domain/pricing'
-import type { ICostRepository, IPlanningRepository } from '../../domain/repositories'
+import type { CloudProposal, NewCloudProposal, WorkspaceMode } from '../../domain/entities'
+import { defaultCostItems, reconcileCostItems } from '../../domain/pricing'
+import type { ICostRepository, IPlanningRepository, IWorkspaceRepository } from '../../domain/repositories'
 
 /** Shared by every use case that adapts its output to the user's active solution. */
 export async function loadActiveProposal(planningRepository: IPlanningRepository): Promise<CloudProposal | null> {
@@ -71,6 +71,33 @@ export class UpdateCloudProposalUseCase {
   }
 }
 
+/** Saves the planning-form fields of an existing proposal. The selected services are the source
+ *  of truth here, so its cost lines are reconciled with them (see domain/pricing). */
+export class EditCloudProposalUseCase {
+  private readonly planningRepository: IPlanningRepository
+  private readonly costRepository: ICostRepository
+
+  constructor(planningRepository: IPlanningRepository, costRepository: ICostRepository) {
+    this.planningRepository = planningRepository
+    this.costRepository = costRepository
+  }
+
+  async execute(id: string, changes: NewCloudProposal): Promise<CloudProposal> {
+    validate(changes)
+    const [current, catalog] = await Promise.all([
+      this.planningRepository.getById(id),
+      this.costRepository.getCatalog(),
+    ])
+    if (!current) throw new Error('La propuesta ya no existe')
+
+    return this.planningRepository.update({
+      ...current,
+      ...changes,
+      costItems: reconcileCostItems(current.costItems, changes.selectedServices, catalog),
+    })
+  }
+}
+
 export class DeleteCloudProposalUseCase {
   private readonly planningRepository: IPlanningRepository
 
@@ -111,17 +138,24 @@ export class SetActiveProposalUseCase {
   }
 }
 
-/** Replaces the stored proposals with the demo scenario and activates the first one. */
+/** Replaces the stored proposals with the demo scenario, back in demo mode, and activates the first. */
 export class LoadExampleScenarioUseCase {
   private readonly planningRepository: IPlanningRepository
+  private readonly workspaceRepository: IWorkspaceRepository
   private readonly scenario: Omit<CloudProposal, 'createdAt'>[]
 
-  constructor(planningRepository: IPlanningRepository, scenario: Omit<CloudProposal, 'createdAt'>[]) {
+  constructor(
+    planningRepository: IPlanningRepository,
+    workspaceRepository: IWorkspaceRepository,
+    scenario: Omit<CloudProposal, 'createdAt'>[],
+  ) {
     this.planningRepository = planningRepository
+    this.workspaceRepository = workspaceRepository
     this.scenario = scenario
   }
 
   async execute(): Promise<CloudProposal | null> {
+    await this.workspaceRepository.setMode('demo')
     const now = Date.now()
     // Staggered timestamps keep the scenario order when listed newest first.
     const proposals = this.scenario.map((p, index) => ({
@@ -134,15 +168,46 @@ export class LoadExampleScenarioUseCase {
   }
 }
 
-/** Removes every proposal and the active selection: the app starts from zero. */
+/** Removes every proposal and the active selection and returns to the reference (demo) data. */
 export class ResetWorkspaceUseCase {
   private readonly planningRepository: IPlanningRepository
+  private readonly workspaceRepository: IWorkspaceRepository
 
-  constructor(planningRepository: IPlanningRepository) {
+  constructor(planningRepository: IPlanningRepository, workspaceRepository: IWorkspaceRepository) {
     this.planningRepository = planningRepository
+    this.workspaceRepository = workspaceRepository
   }
 
-  execute(): Promise<void> {
-    return this.planningRepository.clear()
+  async execute(): Promise<void> {
+    await this.planningRepository.clear()
+    await this.workspaceRepository.setMode('demo')
+  }
+}
+
+/** Empty workspace: no proposals and no example company data, only the AWS catalog and regions. */
+export class StartBlankWorkspaceUseCase {
+  private readonly planningRepository: IPlanningRepository
+  private readonly workspaceRepository: IWorkspaceRepository
+
+  constructor(planningRepository: IPlanningRepository, workspaceRepository: IWorkspaceRepository) {
+    this.planningRepository = planningRepository
+    this.workspaceRepository = workspaceRepository
+  }
+
+  async execute(): Promise<void> {
+    await this.planningRepository.clear()
+    await this.workspaceRepository.setMode('blank')
+  }
+}
+
+export class GetWorkspaceModeUseCase {
+  private readonly workspaceRepository: IWorkspaceRepository
+
+  constructor(workspaceRepository: IWorkspaceRepository) {
+    this.workspaceRepository = workspaceRepository
+  }
+
+  execute(): Promise<WorkspaceMode> {
+    return this.workspaceRepository.getMode()
   }
 }

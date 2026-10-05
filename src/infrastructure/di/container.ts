@@ -17,12 +17,15 @@ import { GetSharedResponsibilityUseCase } from '../../application/use-cases/GetS
 import { GetSystemAlertsUseCase } from '../../application/use-cases/GetSystemAlertsUseCase'
 import {
   DeleteCloudProposalUseCase,
+  EditCloudProposalUseCase,
   GetActiveProposalUseCase,
   GetCloudProposalsUseCase,
+  GetWorkspaceModeUseCase,
   LoadExampleScenarioUseCase,
   RegisterCloudProposalUseCase,
   ResetWorkspaceUseCase,
   SetActiveProposalUseCase,
+  StartBlankWorkspaceUseCase,
   UpdateCloudProposalUseCase,
 } from '../../application/use-cases/PlanningUseCases'
 import { SimulateRegionFailoverUseCase } from '../../application/use-cases/SimulateRegionFailoverUseCase'
@@ -33,6 +36,7 @@ import { NetworkRepository } from '../repositories/NetworkRepository'
 import { PlanningRepository } from '../repositories/PlanningRepository'
 import { RegionRepository } from '../repositories/RegionRepository'
 import { SecurityRepository } from '../repositories/SecurityRepository'
+import { WorkspaceRepository } from '../repositories/WorkspaceRepository'
 
 function buildContainer() {
   // Infrastructure: concrete adapters for each domain port.
@@ -42,6 +46,7 @@ function buildContainer() {
   const securityRepository = new SecurityRepository()
   const planningRepository = new PlanningRepository()
   const networkRepository = new NetworkRepository()
+  const workspaceRepository = new WorkspaceRepository()
 
   // Use-cases that other use-cases compose.
   const getSecurityChecks = new GetSecurityChecksUseCase(securityRepository, planningRepository)
@@ -60,7 +65,7 @@ function buildContainer() {
     getCloudServices,
     getCloudServiceDetail: new GetCloudServiceDetailUseCase(cloudServiceRepository, regionRepository, planningRepository),
     getRegions: new GetRegionsUseCase(regionRepository),
-    getRegionConnections: new GetRegionConnectionsUseCase(regionRepository),
+    getRegionConnections: new GetRegionConnectionsUseCase(regionRepository, planningRepository),
     simulateRegionFailover: new SimulateRegionFailoverUseCase(regionRepository),
     getCostCatalog: new GetCostCatalogUseCase(costRepository),
     estimateCost,
@@ -71,11 +76,14 @@ function buildContainer() {
     getCloudProposals: new GetCloudProposalsUseCase(planningRepository),
     registerCloudProposal: new RegisterCloudProposalUseCase(planningRepository, costRepository),
     updateCloudProposal: new UpdateCloudProposalUseCase(planningRepository),
+    editCloudProposal: new EditCloudProposalUseCase(planningRepository, costRepository),
     deleteCloudProposal: new DeleteCloudProposalUseCase(planningRepository),
     getActiveProposal: new GetActiveProposalUseCase(planningRepository),
     setActiveProposal: new SetActiveProposalUseCase(planningRepository),
-    loadExampleScenario: new LoadExampleScenarioUseCase(planningRepository, EXAMPLE_SCENARIO_DATA),
-    resetWorkspace: new ResetWorkspaceUseCase(planningRepository),
+    loadExampleScenario: new LoadExampleScenarioUseCase(planningRepository, workspaceRepository, EXAMPLE_SCENARIO_DATA),
+    resetWorkspace: new ResetWorkspaceUseCase(planningRepository, workspaceRepository),
+    startBlankWorkspace: new StartBlankWorkspaceUseCase(planningRepository, workspaceRepository),
+    getWorkspaceMode: new GetWorkspaceModeUseCase(workspaceRepository),
     getNetworkArchitecture: new GetNetworkArchitectureUseCase(networkRepository, planningRepository, regionRepository),
     getDashboardSummary,
     generateCloudReport: new GenerateCloudReportUseCase(

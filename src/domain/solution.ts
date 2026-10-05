@@ -73,7 +73,11 @@ export function evaluateSolutionSecurity(proposal: CloudProposal): SecurityCheck
 
 /** Builds the network diagram from the services of the solution. EC2 and RDS always live in a
  *  VPC (the default one if VPC was not chosen); serverless and storage stay outside it. */
-export function buildSolutionArchitecture(proposal: CloudProposal, regionCode: string): NetworkArchitecture {
+export function buildSolutionArchitecture(
+  proposal: CloudProposal,
+  regionCode: string,
+  secondaryRegionName?: string,
+): NetworkArchitecture {
   const nodes: NetworkNode[] = [
     { id: 'internet', label: 'Internet', type: 'internet', description: `Los ${proposal.estimatedUsers.toLocaleString('es-PE')} usuarios estimados de la solución.` },
   ]
@@ -159,7 +163,11 @@ export function buildSolutionArchitecture(proposal: CloudProposal, regionCode: s
   }
 
   if (multiAz && needsVpc) notes.push(`Alta disponibilidad: los recursos se replican en dos zonas (${zones}).`)
-  if (proposal.availabilityLevel === 'critical') notes.push('Nivel crítico: existe una copia en una región secundaria y Route 53 hace failover si la región principal cae.')
+  if (proposal.availabilityLevel === 'critical') {
+    notes.push(
+      `Nivel crítico: la solución se replica en una región secundaria${secondaryRegionName ? ` (${secondaryRegionName})` : ''} y Route 53 hace failover si la región principal cae.`,
+    )
+  }
   if (!needsVpc) notes.push('La solución no usa EC2 ni RDS, así que no necesita una VPC: todos sus servicios son administrados por AWS.')
 
   return { solutionName: proposal.solutionName, vpcCidr: '10.0.0.0/16', notes, nodes, connections, subnets, securityGroups }

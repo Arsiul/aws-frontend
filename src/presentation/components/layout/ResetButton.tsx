@@ -1,30 +1,47 @@
-import { RotateCcw } from 'lucide-react'
+import { Eraser, RotateCcw } from 'lucide-react'
 import { useState } from 'react'
 import { useActiveSolution } from '../../context/activeSolution'
 
-/** Wipes every saved datum (proposals, costs, region, theme, notifications) after confirmation. */
-export function ResetButton() {
-  const { resetAll } = useActiveSolution()
-  const [isResetting, setIsResetting] = useState(false)
+const WIPED = 'propuestas, solución activa, estimaciones de costos, región, tema y notificaciones'
 
-  const handleClick = async () => {
-    const confirmed = window.confirm(
-      '¿Restablecer todo desde cero?\n\nSe borrarán las propuestas, la solución activa, las estimaciones de costos, la región, el tema y las notificaciones guardadas.',
-    )
-    if (!confirmed) return
-    setIsResetting(true)
-    await resetAll()
+/** Two ways to start over: an empty workspace to fill by hand, or back to the example data. */
+export function ResetButton() {
+  const { startBlank, resetAll } = useActiveSolution()
+  const [busy, setBusy] = useState(false)
+
+  const run = async (message: string, action: () => Promise<void>) => {
+    if (!window.confirm(message)) return
+    setBusy(true)
+    await action()
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      disabled={isResetting}
-      className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-slate-300 transition-colors duration-200 hover:border-alert/50 hover:bg-alert/10 hover:text-white disabled:opacity-50"
-    >
-      <RotateCcw size={14} />
-      {isResetting ? 'Restableciendo…' : 'Restablecer todo'}
-    </button>
+    <div className="space-y-2">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() =>
+          run(
+            `¿Empezar en blanco?\n\nSe borrarán ${WIPED}, y no se mostrará ningún dato de ejemplo: solo el catálogo de AWS y sus regiones para que lo llenes tú.`,
+            startBlank,
+          )
+        }
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs font-medium text-white transition-colors duration-200 hover:bg-white/20 disabled:opacity-50"
+      >
+        <Eraser size={14} />
+        Empezar en blanco
+      </button>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() =>
+          run(`¿Restaurar los datos de ejemplo?\n\nSe borrarán ${WIPED}, y volverán los datos de referencia.`, resetAll)
+        }
+        className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-slate-300 transition-colors duration-200 hover:border-white/30 hover:text-white disabled:opacity-50"
+      >
+        <RotateCcw size={14} />
+        {busy ? 'Restableciendo…' : 'Restaurar datos de ejemplo'}
+      </button>
+    </div>
   )
 }

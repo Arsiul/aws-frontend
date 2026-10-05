@@ -52,11 +52,13 @@ Cada propuesta registrada en **Planificación** es una solución propia (datos m
 | Costos | Las líneas son los recursos de la solución; agregar o quitar uno actualiza el Dashboard, la Red y la Seguridad |
 | Arquitectura de Red | El diagrama se genera con sus servicios (sin EC2 no hay Load Balancer; multi-AZ replica en dos zonas; S3, Lambda y CloudWatch van fuera de la VPC) |
 | Seguridad | Controles evaluados sobre el diseño: IAM, disponibilidad, protección DDoS, monitoreo y datos |
-| Infraestructura Global | Resalta su región y los servicios desplegados; cambiar de región mueve la solución y recalcula precios |
+| Infraestructura Global | Resalta su región y los servicios desplegados; cambiar de región mueve la solución y recalcula precios. Con disponibilidad **crítica (multi-región)** dibuja la línea animada de replicación hacia su región secundaria (la operativa más cercana); multi-AZ no la dibuja porque sus réplicas están dentro de la misma región |
 | Servicios AWS | El estado de utilización (activo / inactivo) refleja los servicios de la solución |
 
+- **Editar** (lápiz en cada propuesta): carga la propuesta en el formulario para cambiar cualquier campo. Si se quitan o agregan servicios, sus recursos de Costos se ajustan solos; las cantidades y horas ya configuradas se conservan. Si es la solución activa, todos los módulos se actualizan al guardar.
 - **Cargar caso de ejemplo**: carga tres soluciones de demostración (multi-AZ, una con fallas de seguridad y una multi-región serverless).
-- **Restablecer todo** (barra lateral): borra propuestas, solución activa, costos, región, tema y notificaciones, y deja la app desde cero.
+- **Empezar en blanco** (barra lateral y Planificación): borra todo y deja la app vacía, sin ningún dato de ejemplo (ni hallazgos de seguridad, ni usuarios IAM, ni incidencias de regiones, ni notificaciones). Solo quedan el catálogo de servicios de AWS, sus regiones y el modelo de responsabilidad compartida, para que el usuario cree sus propios datos.
+- **Restaurar datos de ejemplo** (barra lateral): borra todo y vuelve a los datos de referencia.
 
 ### Retos adicionales implementados
 

@@ -1,6 +1,6 @@
 import type { FailoverResult, Region } from '../../domain/entities'
 import type { IRegionRepository } from '../../domain/repositories'
-import { haversineDistanceKm } from '../../shared/utils/geo'
+import { nearestOperationalRegion } from '../../domain/regions'
 
 /**
  * Business rule: when a region goes down, the optimal fallback is the closest
@@ -22,23 +22,9 @@ export class SimulateRegionFailoverUseCase {
       throw new Error(`Region ${downRegionId} not found`)
     }
 
-    const candidates = regions.filter((r) => r.id !== downRegionId && r.status === 'operational')
-
-    if (candidates.length === 0) {
-      return { downRegion, optimalRegion: null, distanceKm: null }
-    }
-
-    let optimalRegion = candidates[0]
-    let shortestDistance = haversineDistanceKm(downRegion.coordinates, optimalRegion.coordinates)
-
-    for (const candidate of candidates.slice(1)) {
-      const distance = haversineDistanceKm(downRegion.coordinates, candidate.coordinates)
-      if (distance < shortestDistance) {
-        optimalRegion = candidate
-        shortestDistance = distance
-      }
-    }
-
-    return { downRegion, optimalRegion, distanceKm: Math.round(shortestDistance) }
+    const nearest = nearestOperationalRegion(downRegion, regions)
+    return nearest
+      ? { downRegion, optimalRegion: nearest.region, distanceKm: Math.round(nearest.distanceKm) }
+      : { downRegion, optimalRegion: null, distanceKm: null }
   }
 }

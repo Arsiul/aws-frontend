@@ -125,6 +125,7 @@ export const REGIONS_DATA: Region[] = [
   },
 ]
 
+// Simplified view of the AWS global network (private backbone) between the regions shown.
 export const REGION_CONNECTIONS_DATA: RegionConnection[] = [
   { fromRegionId: 'us-east-1', toRegionId: 'eu-west-1', type: 'primary' },
   { fromRegionId: 'us-east-1', toRegionId: 'sa-east-1', type: 'primary' },

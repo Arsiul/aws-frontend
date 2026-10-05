@@ -85,6 +85,13 @@ export function IamPanel({ identities }: IamPanelProps) {
             </tr>
           </thead>
           <tbody>
+            {visible.length === 0 && (
+              <tr>
+                <td colSpan={5} className="py-8 text-center text-sm text-text-secondary">
+                  No hay identidades IAM registradas.
+                </td>
+              </tr>
+            )}
             {visible.map((identity) => {
               const Icon = TYPE_ICONS[identity.type]
               return (

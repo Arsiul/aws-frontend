@@ -34,6 +34,22 @@ export function estimateCostLines(
   })
 }
 
+/** When the services of a solution are edited: lines of removed services go away, newly added
+ *  billable services get a default line, and the lines the user already tuned are kept. */
+export function reconcileCostItems(
+  current: CostEstimateRequest[],
+  selectedServices: string[],
+  catalog: CostCatalogItem[],
+): CostEstimateRequest[] {
+  const kept = current.filter((item) => selectedServices.includes(item.serviceId))
+  const billed = new Set(kept.map((item) => item.serviceId))
+  const added = defaultCostItems(
+    selectedServices.filter((id) => !billed.has(id)),
+    catalog,
+  )
+  return [...kept, ...added]
+}
+
 /** Starting cost lines for a new solution: one unit of each billable service, running 24/7. */
 export function defaultCostItems(serviceIds: string[], catalog: CostCatalogItem[]): CostEstimateRequest[] {
   return serviceIds

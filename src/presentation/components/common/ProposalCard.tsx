@@ -1,4 +1,4 @@
-import { CalendarDays, CheckCircle2, MapPin, Power, Target, Trash2, Users } from 'lucide-react'
+import { CalendarDays, CheckCircle2, MapPin, Pencil, Power, Target, Trash2, Users } from 'lucide-react'
 import type { CloudProposal } from '../../../domain/entities'
 import { formatDate, formatNumber } from '../../../shared/utils/format'
 import { AVAILABILITY_LABELS } from '../../labels'
@@ -11,17 +11,33 @@ interface ProposalCardProps {
   regionName: string
   serviceNames: Record<string, string>
   isActive?: boolean
+  isEditing?: boolean
   onActivate?: (id: string | null) => void
+  onEdit?: (id: string) => void
   onDelete?: (id: string) => void
 }
 
-export function ProposalCard({ proposal, regionName, serviceNames, isActive, onActivate, onDelete }: ProposalCardProps) {
+export function ProposalCard({
+  proposal,
+  regionName,
+  serviceNames,
+  isActive,
+  isEditing,
+  onActivate,
+  onEdit,
+  onDelete,
+}: ProposalCardProps) {
   return (
     <article
       className={`flex animate-fadeInUp flex-col rounded-card border bg-card p-5 shadow-card transition-all duration-200 hover:shadow-md ${
         isActive ? 'border-brand ring-2 ring-brand/20' : 'border-border'
-      }`}
+      } ${isEditing ? 'outline-dashed outline-2 outline-offset-4 outline-cost' : ''}`}
     >
+      {isEditing && (
+        <p className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-cost">
+          <Pencil size={13} /> Editando en el formulario
+        </p>
+      )}
       {isActive && (
         <p className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-brand">
           <CheckCircle2 size={14} /> Solución activa en todos los módulos
@@ -32,16 +48,30 @@ export function ProposalCard({ proposal, regionName, serviceNames, isActive, onA
           <h3 className="truncate text-base font-semibold text-text-primary">{proposal.solutionName}</h3>
           <p className="text-xs font-medium uppercase tracking-wide text-text-secondary">{proposal.applicationType}</p>
         </div>
-        {onDelete && (
-          <button
-            type="button"
-            onClick={() => onDelete(proposal.id)}
-            aria-label={`Eliminar propuesta ${proposal.solutionName}`}
-            className="rounded-lg p-1.5 text-text-secondary transition-colors duration-200 hover:bg-alert/10 hover:text-alert"
-          >
-            <Trash2 size={16} />
-          </button>
-        )}
+        <div className="flex shrink-0 items-center gap-1 print:hidden">
+          {onEdit && (
+            <button
+              type="button"
+              onClick={() => onEdit(proposal.id)}
+              aria-label={`Editar propuesta ${proposal.solutionName}`}
+              title="Editar"
+              className="rounded-lg p-1.5 text-text-secondary transition-colors duration-200 hover:bg-brand/10 hover:text-brand"
+            >
+              <Pencil size={16} />
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(proposal.id)}
+              aria-label={`Eliminar propuesta ${proposal.solutionName}`}
+              title="Eliminar"
+              className="rounded-lg p-1.5 text-text-secondary transition-colors duration-200 hover:bg-alert/10 hover:text-alert"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
+        </div>
       </div>
 
       <p className="mt-3 text-sm text-text-secondary">{proposal.description}</p>

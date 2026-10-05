@@ -18,6 +18,7 @@ import { formatCurrency, isoDateStamp } from '../../shared/utils/format'
 import { CostByCategoryChart } from '../components/charts/CostByCategoryChart'
 import { CostTrendChart } from '../components/charts/CostTrendChart'
 import { ErrorState, LoadingState } from '../components/common/AsyncState'
+import { EmptyState } from '../components/common/EmptyState'
 import { PageHeader } from '../components/common/PageHeader'
 import { SolutionBanner } from '../components/common/SolutionBanner'
 import { Panel } from '../components/common/Panel'
@@ -39,7 +40,7 @@ export function Dashboard() {
   const { data: summary, error } = useDashboardSummary(selectedRegionId)
   const { data: securityChecks } = useSecurityChecks()
   const { data: services } = useCloudServices()
-  const { proposals } = useActiveSolution()
+  const { proposals, workspaceMode } = useActiveSolution()
   const { generate, isGenerating } = useCloudReport()
   const { notify } = useNotifications()
   const navigate = useNavigate()
@@ -47,6 +48,24 @@ export function Dashboard() {
   // Error first: on failure summary stays null and would otherwise spin forever.
   if (error) return <ErrorState message={error} />
   if (!summary) return <LoadingState label="Cargando resumen del dashboard…" />
+
+  if (workspaceMode === 'blank' && !summary.solution) {
+    return (
+      <div className="space-y-6">
+        <PageHeader icon={LayoutDashboard} title="Dashboard" description="Resumen general de tu solución Cloud." />
+        <EmptyState
+          icon={LayoutDashboard}
+          title="Tu dashboard está vacío"
+          description="Registra una propuesta en Planificación: aquí verás sus servicios, región, costo mensual y anual, recursos, seguridad y estado."
+          action={
+            <Link to="/planning" className="btn-primary">
+              Crear mi primera propuesta
+            </Link>
+          }
+        />
+      </div>
+    )
+  }
 
   const criticalChecks = securityChecks?.filter((c) => c.status === 'critical') ?? []
   const warningChecks = securityChecks?.filter((c) => c.status === 'warning') ?? []

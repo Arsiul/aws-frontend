@@ -76,6 +76,7 @@ export function Security() {
 
       {identities && <IamPanel identities={identities} />}
 
+      {accountChecks.length > 0 && (
       <Panel
         title={solutionChecks.length > 0 ? 'Controles de la cuenta' : 'Controles de seguridad'}
         icon={ListChecks}
@@ -88,6 +89,7 @@ export function Security() {
           ))}
         </div>
       </Panel>
+      )}
     </div>
   )
 }

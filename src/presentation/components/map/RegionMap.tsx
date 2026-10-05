@@ -58,6 +58,7 @@ export function RegionMap({
     setTooltip({ region, x: event.clientX - bounds.left, y: event.clientY - bounds.top })
   }
 
+  const solutionLink = connections.find((c) => c.type === 'solution')
   const downRegionId = failoverResult?.downRegion.id
   const optimalRegionId = failoverResult?.optimalRegion?.id
 
@@ -92,7 +93,9 @@ export function RegionMap({
             if (!from || !to) return null
 
             const involvesDownRegion = downRegionId && (conn.fromRegionId === downRegionId || conn.toRegionId === downRegionId)
-            const key = `${conn.fromRegionId}-${conn.toRegionId}`
+            const key = `${conn.type}-${conn.fromRegionId}-${conn.toRegionId}`
+            // The active solution's own replication link stands out from the reference topology.
+            const isSolution = conn.type === 'solution'
 
             return (
               <g key={key}>
@@ -100,17 +103,17 @@ export function RegionMap({
                   from={from.coordinates}
                   to={to.coordinates}
                   stroke={involvesDownRegion ? '#DC2626' : '#2563EB'}
-                  strokeWidth={conn.type === 'primary' ? 1.4 : 1}
-                  strokeOpacity={involvesDownRegion ? 0.35 : conn.type === 'primary' ? 0.55 : 0.3}
+                  strokeWidth={isSolution ? 2.4 : conn.type === 'primary' ? 1.4 : 1}
+                  strokeOpacity={involvesDownRegion ? 0.35 : isSolution ? 0.9 : conn.type === 'primary' ? 0.55 : 0.3}
                   strokeDasharray={conn.type === 'backup' ? '3 3' : undefined}
                   style={{ transition: 'stroke 0.3s ease, stroke-opacity 0.3s ease' }}
                 />
                 {!involvesDownRegion && (
                   <FlowParticles
                     pathD={connectionPathD(from.coordinates, to.coordinates)}
-                    color={conn.type === 'primary' ? '#2563EB' : '#94A3B8'}
+                    color={conn.type === 'backup' ? '#94A3B8' : '#2563EB'}
                     durationSeconds={flowDuration(from.coordinates, to.coordinates)}
-                    count={conn.type === 'primary' ? 2 : 1}
+                    count={isSolution ? 3 : conn.type === 'primary' ? 2 : 1}
                   />
                 )}
               </g>
@@ -197,15 +200,21 @@ export function RegionMap({
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full border border-dashed border-brand" /> Región principal
         </span>
+        {solutionLink && (
+          <span className="flex items-center gap-1.5 font-medium text-brand">
+            <span className="h-1 w-4 rounded bg-brand" /> Replicación de tu solución ({regionById(solutionLink.fromRegionId)?.name} →{' '}
+            {regionById(solutionLink.toRegionId)?.name})
+          </span>
+        )}
         <span className="flex items-center gap-1.5">
-          <span className="h-0.5 w-4 bg-brand/60" /> Conexión primaria
+          <span className="h-0.5 w-4 bg-brand/60" /> Red global de AWS (troncal)
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-0.5 w-4 border-t border-dashed border-slate-400" /> Conexión backup
+          <span className="h-0.5 w-4 border-t border-dashed border-slate-400" /> Red global de AWS (secundaria)
         </span>
         <span className="flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rotate-90 border-y-[3px] border-l-[5px] border-y-transparent border-l-brand" />
-          Tráfico en tiempo real
+          Flujo de datos (simulado)
         </span>
         <span className="ml-auto text-[11px]">
           Clic en una región para simular su caída y calcular la región óptima de reemplazo.

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type PropsWithChildren } from 'react'
-import type { CloudProposal, NewCloudProposal } from '../../domain/entities'
+import type { CloudProposal, NewCloudProposal, WorkspaceMode } from '../../domain/entities'
 import { useContainer } from '../../infrastructure/di/DIProvider'
 import { ActiveSolutionContext } from './activeSolution'
 import { useNotifications } from './notifications'
@@ -15,16 +15,20 @@ export function ActiveSolutionProvider({ children }: PropsWithChildren) {
     getActiveProposal,
     registerCloudProposal,
     updateCloudProposal,
+    editCloudProposal,
     deleteCloudProposal,
     setActiveProposal,
     loadExampleScenario,
     resetWorkspace,
+    startBlankWorkspace,
+    getWorkspaceMode,
   } = useContainer()
   const { setSelectedRegionId } = useSelectedRegion()
   const { notify } = useNotifications()
 
   const [proposals, setProposals] = useState<CloudProposal[]>([])
   const [activeProposal, setActive] = useState<CloudProposal | null>(null)
+  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>('demo')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [version, setVersion] = useState(0)
@@ -33,9 +37,14 @@ export function ActiveSolutionProvider({ children }: PropsWithChildren) {
 
   const reload = useCallback(async () => {
     try {
-      const [all, active] = await Promise.all([getCloudProposals.execute(), getActiveProposal.execute()])
+      const [all, active, mode] = await Promise.all([
+        getCloudProposals.execute(),
+        getActiveProposal.execute(),
+        getWorkspaceMode.execute(),
+      ])
       setProposals(all)
       setActive(active)
+      setWorkspaceMode(mode)
       setError(null)
       return active
     } catch (err) {
@@ -45,7 +54,7 @@ export function ActiveSolutionProvider({ children }: PropsWithChildren) {
       setIsLoading(false)
       setVersion((v) => v + 1)
     }
-  }, [getCloudProposals, getActiveProposal])
+  }, [getCloudProposals, getActiveProposal, getWorkspaceMode])
 
   // On start, the working region follows the solution that was active last time.
   useEffect(() => {
@@ -76,6 +85,34 @@ export function ActiveSolutionProvider({ children }: PropsWithChildren) {
       }
     },
     [registerCloudProposal, reload, setSelectedRegionId, notify],
+  )
+
+  const edit = useCallback(
+    async (id: string, changes: NewCloudProposal) => {
+      setIsSubmitting(true)
+      setSubmitError(null)
+      try {
+        const saved = await editCloudProposal.execute(id, changes)
+        const active = await reload()
+        // Editing the active solution's region moves the whole app there, like the header selector.
+        if (active?.id === saved.id) setSelectedRegionId(saved.regionId)
+        notify({
+          tone: 'success',
+          title: 'Propuesta actualizada',
+          message:
+            active?.id === saved.id
+              ? `"${saved.solutionName}" es la solución activa: todos los módulos ya reflejan los cambios.`
+              : `"${saved.solutionName}" guardada.`,
+        })
+        return true
+      } catch (err) {
+        setSubmitError(errorMessage(err, 'No se pudo actualizar la propuesta'))
+        return false
+      } finally {
+        setIsSubmitting(false)
+      }
+    },
+    [editCloudProposal, reload, setSelectedRegionId, notify],
   )
 
   const remove = useCallback(
@@ -136,10 +173,10 @@ export function ActiveSolutionProvider({ children }: PropsWithChildren) {
     })
   }, [loadExampleScenario, reload, setSelectedRegionId, notify])
 
-  // Wipes every key this app owns (proposals, costs, region, theme, notifications) and reloads,
-  // so all in-memory state starts from zero too.
-  const resetAll = useCallback(async () => {
-    await resetWorkspace.execute()
+  // Both resets wipe every key this app owns (proposals, costs, region, theme, notifications) and
+  // reload, so all in-memory state starts from zero too. The use case runs last so the workspace
+  // mode it writes survives the wipe.
+  const wipeAndReload = useCallback(async (finish: () => Promise<void>) => {
     try {
       Object.keys(localStorage)
         .filter((key) => key.startsWith(STORAGE_PREFIX))
@@ -147,27 +184,37 @@ export function ActiveSolutionProvider({ children }: PropsWithChildren) {
     } catch {
       // Storage unavailable: the reload still clears in-memory state.
     }
+    await finish()
     window.location.assign('/dashboard')
-  }, [resetWorkspace])
+  }, [])
+
+  const resetAll = useCallback(() => wipeAndReload(() => resetWorkspace.execute()), [wipeAndReload, resetWorkspace])
+  const startBlank = useCallback(
+    () => wipeAndReload(() => startBlankWorkspace.execute()),
+    [wipeAndReload, startBlankWorkspace],
+  )
 
   const value = useMemo(
     () => ({
       proposals,
       activeProposal,
+      workspaceMode,
       isLoading,
       error,
       version,
       isSubmitting,
       submitError,
       register,
+      edit,
       remove,
       activate,
       updateActive,
       changeRegion,
       loadExample,
       resetAll,
+      startBlank,
     }),
-    [proposals, activeProposal, isLoading, error, version, isSubmitting, submitError, register, remove, activate, updateActive, changeRegion, loadExample, resetAll],
+    [proposals, activeProposal, workspaceMode, isLoading, error, version, isSubmitting, submitError, register, edit, remove, activate, updateActive, changeRegion, loadExample, resetAll, startBlank],
   )
 
   return <ActiveSolutionContext.Provider value={value}>{children}</ActiveSolutionContext.Provider>

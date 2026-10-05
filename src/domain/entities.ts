@@ -1,5 +1,8 @@
 // Domain layer: pure business types. No framework, no infrastructure imports.
 
+/** 'demo' shows the reference company data; 'blank' starts empty so the user fills everything. */
+export type WorkspaceMode = 'demo' | 'blank'
+
 export type HealthStatus = 'operational' | 'degraded' | 'outage'
 
 export type ServiceCategory =
@@ -49,7 +52,8 @@ export interface Region {
 export interface RegionConnection {
   fromRegionId: string
   toRegionId: string
-  type: 'primary' | 'backup'
+  /** 'solution' is the active solution's own multi-region replication link. */
+  type: 'primary' | 'backup' | 'solution'
 }
 
 export type AvailabilityLevel = 'standard' | 'high' | 'critical'

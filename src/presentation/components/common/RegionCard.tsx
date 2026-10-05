@@ -65,6 +65,7 @@ export function RegionCard({
         Servicios desplegados ({region.servicesDeployed.length})
       </p>
       <div className="mt-1.5 flex flex-wrap gap-1.5">
+        {region.servicesDeployed.length === 0 && <span className="text-xs text-text-secondary">Ninguno</span>}
         {region.servicesDeployed.map((serviceId) => (
           <span key={serviceId} className="rounded-md bg-brand/10 px-2 py-0.5 text-[11px] font-medium text-brand">
             {serviceNames[serviceId] ?? serviceId.toUpperCase()}

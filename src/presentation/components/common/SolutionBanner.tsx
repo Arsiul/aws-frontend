@@ -1,4 +1,4 @@
-import { Lightbulb, Rocket, Sparkles } from 'lucide-react'
+import { Lightbulb, PenLine, Rocket, Sparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { formatNumber } from '../../../shared/utils/format'
 import { useActiveSolution } from '../../context/activeSolution'
@@ -11,8 +11,28 @@ interface SolutionBannerProps {
 
 /** Tells the viewer whose data a module is showing: the active solution or the reference catalog. */
 export function SolutionBanner({ detail }: SolutionBannerProps) {
-  const { activeProposal, isLoading, loadExample } = useActiveSolution()
+  const { activeProposal, workspaceMode, isLoading, loadExample } = useActiveSolution()
   if (isLoading) return null
+
+  if (!activeProposal && workspaceMode === 'blank') {
+    return (
+      <div className="flex animate-fadeIn flex-col gap-3 rounded-card border border-dashed border-brand/40 bg-brand/5 p-4 md:flex-row md:items-center md:justify-between print:hidden">
+        <div className="flex items-start gap-3">
+          <PenLine size={18} className="mt-0.5 shrink-0 text-brand" />
+          <div>
+            <p className="text-sm font-semibold text-text-primary">Espacio en blanco</p>
+            <p className="text-xs text-text-secondary">
+              No hay datos de ejemplo. Registra tu primera propuesta en Planificación y todos los módulos se llenarán
+              con ella.
+            </p>
+          </div>
+        </div>
+        <Link to="/planning" className="btn-primary shrink-0">
+          Crear mi primera propuesta
+        </Link>
+      </div>
+    )
+  }
 
   if (!activeProposal) {
     return (

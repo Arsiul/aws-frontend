@@ -1,5 +1,7 @@
 import { Share2 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { ErrorState, LoadingState } from '../components/common/AsyncState'
+import { EmptyState } from '../components/common/EmptyState'
 import { PageHeader } from '../components/common/PageHeader'
 import { SolutionBanner } from '../components/common/SolutionBanner'
 import { NetworkDiagram } from '../components/network/NetworkDiagram'
@@ -26,7 +28,20 @@ export function Network() {
 
       <SolutionBanner detail="el diagrama se arma con sus servicios" />
 
-      <NetworkDiagram architecture={architecture} />
+      {architecture.nodes.length === 0 ? (
+        <EmptyState
+          icon={Share2}
+          title="Sin arquitectura todavía"
+          description="La red se genera a partir de los servicios de tu solución activa: Route 53, CloudFront, VPC, subredes, EC2, RDS…"
+          action={
+            <Link to="/planning" className="btn-primary">
+              Crear mi primera propuesta
+            </Link>
+          }
+        />
+      ) : (
+        <NetworkDiagram architecture={architecture} />
+      )}
     </div>
   )
 }

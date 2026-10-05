@@ -12,6 +12,7 @@ import type {
   RegionConnection,
   SecurityCheckItem,
   SharedResponsibilityModel,
+  WorkspaceMode,
 } from './entities'
 
 export interface ICloudServiceRepository {
@@ -53,4 +54,9 @@ export interface IPlanningRepository {
 
 export interface INetworkRepository {
   getArchitecture(): Promise<NetworkArchitecture>
+}
+
+export interface IWorkspaceRepository {
+  getMode(): Promise<WorkspaceMode>
+  setMode(mode: WorkspaceMode): Promise<void>
 }

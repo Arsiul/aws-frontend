@@ -1,5 +1,6 @@
 import type { NetworkArchitecture } from '../../domain/entities'
 import type { INetworkRepository, IPlanningRepository, IRegionRepository } from '../../domain/repositories'
+import { solutionSecondaryRegion } from '../../domain/regions'
 import { buildSolutionArchitecture } from '../../domain/solution'
 import { loadActiveProposal } from './PlanningUseCases'
 
@@ -23,7 +24,13 @@ export class GetNetworkArchitectureUseCase {
     const proposal = await loadActiveProposal(this.planningRepository)
     if (!proposal) return this.networkRepository.getArchitecture()
 
-    const region = await this.regionRepository.getById(proposal.regionId)
-    return buildSolutionArchitecture(proposal, region?.code ?? proposal.regionId)
+    const regions = await this.regionRepository.getAll()
+    const region = regions.find((r) => r.id === proposal.regionId)
+    const secondary = solutionSecondaryRegion(proposal, regions)
+    return buildSolutionArchitecture(
+      proposal,
+      region?.code ?? proposal.regionId,
+      secondary ? `${secondary.name}, ${secondary.code}` : undefined,
+    )
   }
 }
