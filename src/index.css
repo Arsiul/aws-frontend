@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* RGB channels so Tailwind opacity modifiers (bg-card/80, border-border/50…) keep working. */
+  :root {
+    --color-background: 248 250 252; /* #F8FAFC */
+    --color-card: 255 255 255; /* #FFFFFF */
+    --color-border: 226 232 240; /* #E2E8F0 */
+    --color-text-primary: 30 41 59; /* #1E293B */
+    --color-text-secondary: 100 116 139; /* #64748B */
+    color-scheme: light;
+  }
+
+  .dark {
+    --color-background: 2 6 23;
+    --color-card: 15 23 42;
+    --color-border: 30 41 59;
+    --color-text-primary: 241 245 249;
+    --color-text-secondary: 148 163 184;
+    color-scheme: dark;
+  }
+
+  html {
+    font-family: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  body {
+    @apply bg-background text-text-primary antialiased transition-colors duration-200;
+  }
+
+  @media print {
+    .dark {
+      --color-background: 248 250 252;
+      --color-card: 255 255 255;
+      --color-border: 226 232 240;
+      --color-text-primary: 30 41 59;
+      --color-text-secondary: 100 116 139;
+    }
+  }
+}
+
+@layer components {
+  .input {
+    @apply w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text-primary transition placeholder:text-text-secondary/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-text-secondary transition hover:border-brand/40 hover:text-brand disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .chip {
+    @apply rounded-full border px-3 py-1.5 text-xs font-medium transition;
+  }
+
+  .chip-active {
+    @apply border-brand bg-brand text-white;
+  }
+
+  .chip-idle {
+    @apply border-border bg-card text-text-secondary hover:border-brand/40 hover:text-brand;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+}
